@@ -1,6 +1,6 @@
 import { BolleanInt } from "../App";
 
-export const gridRow: number = 6;
+export const gridRow: number = 50;
 export const voidRow: number = gridRow + 2;
 const voidGrid: number = voidRow * voidRow;
 

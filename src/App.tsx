@@ -2,6 +2,9 @@ import { ComputeNextGeneration } from "./calcaulations/rules";
 import { gridRow } from "./calcaulations/rules";
 import { useEffect, useState } from "react";
 import cleanIcon from "./assets/images/clean.svg";
+import settingsIcon from "./assets/images/settings.svg";
+import playIcon from "./assets/images/play.svg";
+import stopIcon from "./assets/images/stop.svg";
 
 export type BolleanInt = 0 | 1;
 
@@ -11,6 +14,7 @@ function App() {
     () => 0
   );
   const [isOnDrawing, setIsOnDrawing] = useState<boolean>(true);
+  const [isMouseDown, setIsMouseDown] = useState<boolean>(false);
   const [population, setPopulation] = useState<BolleanInt[]>(
     populationInitState as BolleanInt[]
   );
@@ -18,6 +22,7 @@ function App() {
   const [generation, setGeneration] = useState<number>(0);
 
   const simulate = () => {
+    console.log("Current Generation:", generation);
     setIsOnDrawing(false);
     setPopulation(ComputeNextGeneration(population));
     setGeneration((prev) => prev + 1);
@@ -25,7 +30,7 @@ function App() {
 
   const toggleCell = (cellNumber: number, population: BolleanInt[]): void => {
     const populationCopy: BolleanInt[] = [...population];
-    populationCopy[cellNumber] = populationCopy[cellNumber] === 0 ? 1 : 0; //toggle
+    populationCopy[cellNumber] = populationCopy[cellNumber] === 0 ? 1 : 0; // !(...) cant be used because of type BolleanInt
     setPopulation(populationCopy);
   };
 
@@ -43,51 +48,62 @@ function App() {
     }
   };
 
+  const generationDaelayInMs: number = 50;
+
   useEffect(() => {
     let intervalId: number;
     if (!isOnDrawing) {
       intervalId = setInterval(() => {
         simulate();
-      }, 1000);
+      }, generationDaelayInMs);
 
       // Clear the interval before creating a new one
       return () => clearInterval(intervalId);
     }
   }, [isOnDrawing, population]);
 
+  useEffect(() => {
+    {
+      generation > 0 && !population.includes(1) && reset();
+    }
+  }, [population]);
+
   return (
     <div className="w-full h-screen flex flex-col items-center justify-center bg-gray-200 p-5">
-      <div className="h-[20svh] w-full flex flex-col items-center justify-center">
-        <div className="flex w-full items-center justify-between">
-          {!isOnDrawing && <p>Generation: {generation}</p>}
-          <div>
+      <div className="h-[20svh] w-full flex flex-col items-center justify-center p-10">
+        <div className="flex w-full items-center justify-center gap-10">
+          <div className="flex-1 flex items-center justify-start">
+            <img className="size-20" src={settingsIcon} />
+          </div>
+          <div className="flex-1 flex items-center justify-center">
+            <button
+              className="hover:bg-black/40 hover:text-white/90 text-grayishWhite font-bold rounded-2xl"
+              onClick={handleMainButtonClick}
+            >
+              <img
+                className="size-20"
+                src={isOnDrawing ? playIcon : stopIcon}
+              />
+            </button>
+          </div>
+          <div className="flex-1 flex items-center justify-end">
             {isOnDrawing ? (
-              population.includes(1) && ( // clean the drawing if there is a cell
-                <button
-                  className="flex items-center justify-center gap-1"
-                  onClick={reset}
-                >
-                  <img className="h-5 w-5" src={cleanIcon} />
-                  <div>clean board</div>
-                </button>
-              )
+              <button className="flex gap-1" onClick={reset}>
+                {population.includes(1) && (
+                  <img className="size-15" src={cleanIcon} />
+                )}
+              </button>
             ) : (
-              <button onClick={simulate}>next</button>
+              <p>Generation: {generation}</p>
             )}
           </div>
-        </div>
-        <div className="flex-1">
-          <button
-            className="bg-black hover:bg-black/90 hover:text-white/90 text-grayishWhite font-bold py-2 px-12 rounded-2xl"
-            onClick={handleMainButtonClick}
-          >
-            {isOnDrawing ? "Simulate" : "Reset"}
-          </button>
         </div>
       </div>
 
       <div className="flex-1">
         <div
+          onMouseDown={() => setIsMouseDown(true)}
+          onMouseUp={() => setIsMouseDown(false)}
           className="bg-black grid border border-[#000000]"
           style={{
             gridTemplateRows: `repeat(${gridRow}, minmax(0, 1fr))`,
@@ -99,6 +115,7 @@ function App() {
               key={i}
               cellNumber={i}
               isOnDrawing={isOnDrawing}
+              isMouseDown={isMouseDown}
               population={population}
               onClick={toggleCell}
             />
@@ -114,6 +131,7 @@ export default App;
 interface CellProps {
   cellNumber: number;
   isOnDrawing: boolean;
+  isMouseDown: boolean;
   population: BolleanInt[];
   onClick: (cellNumber: number, population: BolleanInt[]) => void;
 }
@@ -121,12 +139,13 @@ interface CellProps {
 function Cell({
   cellNumber,
   isOnDrawing,
+  isMouseDown,
   population,
   onClick: toggleCell,
 }: CellProps) {
-  const handleCellClick = () => {
+  const handleDrawing = () => {
     if (isOnDrawing) {
-      toggleCell(cellNumber, population);
+      isMouseDown && toggleCell(cellNumber, population);
     } else {
       console.log(
         "Can't Draw while on Simulating Mode\nPress Reset on The Main Button to enter the drawing mode again."
@@ -134,14 +153,26 @@ function Cell({
     }
   };
 
+  const aliveDeadRatio: number = 7 / 12;
+
+  const cubeSizeInPx: number = 15;
+  const aliveCellSizeInPx: number = cubeSizeInPx * aliveDeadRatio;
+
   return (
     <div
-      onClick={handleCellClick}
-      className="size-12 bg-black flex items-center justify-center border border-white"
+      onMouseEnter={handleDrawing}
+      className="bg-black flex items-center justify-center"
+      style={{
+        width: cubeSizeInPx,
+        height: cubeSizeInPx,
+      }}
     >
       {/* return null if isAlive is false to avoid reacts render the value 0*/}
       {population[cellNumber] ? (
-        <div className="size-7 bg-white rounded-4xl"></div>
+        <div
+          className="[${aliveCellSize}] bg-white rounded-4xl"
+          style={{ height: aliveCellSizeInPx, width: aliveCellSizeInPx }}
+        ></div>
       ) : null}
     </div>
   );
