@@ -1,31 +1,80 @@
 import { ComputeNextGeneration } from "./calcaulations/rules";
-import { useLifeStore } from "./store";
 import { gridRow } from "./calcaulations/rules";
+import { useEffect, useState } from "react";
+import cleanIcon from "./assets/images/clean.svg";
+
+export type BolleanInt = 0 | 1;
 
 function App() {
-  const { isOnDrawing, toggleIsOnDrawing, population, generation, reset } =
-    useLifeStore();
+  const populationInitState: BolleanInt[] = Array.from(
+    { length: gridRow * gridRow },
+    () => 0
+  );
+  const [isOnDrawing, setIsOnDrawing] = useState<boolean>(true);
+  const [population, setPopulation] = useState<BolleanInt[]>(
+    populationInitState as BolleanInt[]
+  );
+
+  const [generation, setGeneration] = useState<number>(0);
 
   const simulate = () => {
-    console.log("start simulating...");
-    console.log(ComputeNextGeneration(population));
+    setIsOnDrawing(false);
+    setPopulation(ComputeNextGeneration(population));
+    setGeneration((prev) => prev + 1);
+  };
+
+  const toggleCell = (cellNumber: number, population: BolleanInt[]): void => {
+    const populationCopy: BolleanInt[] = [...population];
+    populationCopy[cellNumber] = populationCopy[cellNumber] === 0 ? 1 : 0; //toggle
+    setPopulation(populationCopy);
+  };
+
+  const reset = (): void => {
+    setIsOnDrawing(true);
+    setGeneration(0);
+    setPopulation(populationInitState);
   };
 
   const handleMainButtonClick = () => {
     if (isOnDrawing) {
-      toggleIsOnDrawing();
       simulate();
     } else {
-      toggleIsOnDrawing();
       reset();
     }
   };
 
+  useEffect(() => {
+    let intervalId: number;
+    if (!isOnDrawing) {
+      intervalId = setInterval(() => {
+        simulate();
+      }, 1000);
+
+      // Clear the interval before creating a new one
+      return () => clearInterval(intervalId);
+    }
+  }, [isOnDrawing, population]);
+
   return (
     <div className="w-full h-screen flex flex-col items-center justify-center bg-gray-200 p-5">
       <div className="h-[20svh] w-full flex flex-col items-center justify-center">
-        <div className="flex w-full items-center justify-start">
-          <p>Generation: {generation}</p>
+        <div className="flex w-full items-center justify-between">
+          {!isOnDrawing && <p>Generation: {generation}</p>}
+          <div>
+            {isOnDrawing ? (
+              population.includes(1) && ( // clean the drawing if there is a cell
+                <button
+                  className="flex items-center justify-center gap-1"
+                  onClick={reset}
+                >
+                  <img className="h-5 w-5" src={cleanIcon} />
+                  <div>clean board</div>
+                </button>
+              )
+            ) : (
+              <button onClick={simulate}>next</button>
+            )}
+          </div>
         </div>
         <div className="flex-1">
           <button
@@ -46,7 +95,13 @@ function App() {
           }}
         >
           {population.map((_, i) => (
-            <Cell key={i} cellNumber={i} />
+            <Cell
+              key={i}
+              cellNumber={i}
+              isOnDrawing={isOnDrawing}
+              population={population}
+              onClick={toggleCell}
+            />
           ))}
         </div>
       </div>
@@ -58,13 +113,20 @@ export default App;
 
 interface CellProps {
   cellNumber: number;
+  isOnDrawing: boolean;
+  population: BolleanInt[];
+  onClick: (cellNumber: number, population: BolleanInt[]) => void;
 }
 
-function Cell({ cellNumber }: CellProps) {
-  const { population, isOnDrawing, toggleCell } = useLifeStore();
+function Cell({
+  cellNumber,
+  isOnDrawing,
+  population,
+  onClick: toggleCell,
+}: CellProps) {
   const handleCellClick = () => {
     if (isOnDrawing) {
-      toggleCell(cellNumber);
+      toggleCell(cellNumber, population);
     } else {
       console.log(
         "Can't Draw while on Simulating Mode\nPress Reset on The Main Button to enter the drawing mode again."

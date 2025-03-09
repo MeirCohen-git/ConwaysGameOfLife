@@ -1,103 +1,102 @@
-import { BolleanInt } from "../store";
+import { BolleanInt } from "../App";
 
-export const gridRow: number = 3;
+export const gridRow: number = 6;
 export const voidRow: number = gridRow + 2;
-const grid = gridRow * gridRow;
 const voidGrid: number = voidRow * voidRow;
-const gridStartsAt: number = voidRow + 2;
 
-const computeVoidCells = (): number[] => {
-  //   debugger;
+const addVoids = (population: BolleanInt[]): [BolleanInt[], number[]] => {
+  // debugger;
   let currentVoidCell: number = 0;
-  const voids: number[] = [];
+  let currentGridCell: number = 0;
+  let voidCells: number[] = [];
+
+  const populationWithVoids: BolleanInt[] = [];
 
   //top-voidRow of the void
   for (let i = currentVoidCell; i < voidRow; i++) {
-    voids.push(0);
+    populationWithVoids.push(0);
+    voidCells.push(currentVoidCell);
     currentVoidCell++;
   }
 
   //the side voidRows of the void (with no corners)
   //for each row run this compilation
   for (let i = 0; i < gridRow; i++) {
-    voids.push(0);
+    populationWithVoids.push(0);
+    voidCells.push(currentVoidCell);
     currentVoidCell++;
     for (let j = 0; j < gridRow; j++) {
-      voids.push(1);
+      populationWithVoids.push(population[currentGridCell]); //True Grid cells
+      currentGridCell++; // increment the grid cell which is (voidRow + 2) steps back from the currentVoidCell
       currentVoidCell++;
     }
-    voids.push(0);
+    populationWithVoids.push(0);
+    voidCells.push(currentVoidCell);
     currentVoidCell++;
   }
 
   //bottom-voidRow of the void
   for (let i = currentVoidCell; i < voidGrid; i++) {
-    voids.push(0);
+    populationWithVoids.push(0);
+    voidCells.push(currentVoidCell);
     currentVoidCell++;
   }
-  return voids;
+
+  return [populationWithVoids, voidCells];
 };
 
-const voidCells: number[] = computeVoidCells();
-
-function addVoids(population: BolleanInt[]): BolleanInt[] {
-  const withVoids: BolleanInt[] = population.slice();
-
-  return withVoids;
-}
-
 function ComputeNextGeneration(population: BolleanInt[]): BolleanInt[] {
-  addVoids(population);
-  debugger;
-  let aliveNeighbours: number = 0;
-  let currentNeighbour: number;
+  const [populationWithVoids, voidCells] = addVoids(population);
 
-  const newPopulation = population.slice();
+  const newPopulation = populationWithVoids.slice();
 
-  population.map((_, cellNumber) => {
+  let currentNeighbour: number = 0;
+
+  populationWithVoids.forEach((_, cellNumber) => {
+    // debugger
+    if (voidCells.includes(cellNumber)) {
+      newPopulation[cellNumber] = 0; // void cells are always dead
+      return;
+    }
+
+    let aliveNeighbours: number = 0;
     // 8 is the max number of neighbours (but we increment i by 1 on iteration #4)
-    for (let i = 0; i < 8; i++) {
+    for (let i = 1; i < 9; i++) {
+      // 1 is the min number of neighbours
       switch (i) {
-        case 0:
-          currentNeighbour = cellNumber - gridRow - 1;
-          break;
         case 1:
-          currentNeighbour = currentNeighbour++;
+          currentNeighbour = cellNumber - voidRow - 1;
           break;
         case 2:
-          currentNeighbour = currentNeighbour++;
+          currentNeighbour = cellNumber - voidRow;
           break;
         case 3:
-          currentNeighbour = cellNumber - 1;
+          currentNeighbour = cellNumber - voidRow + 1;
           break;
         case 4:
-          currentNeighbour = cellNumber + 1;
+          currentNeighbour = cellNumber - 1;
           break;
         case 5:
-          currentNeighbour = cellNumber + gridRow - 1;
+          currentNeighbour = cellNumber + 1;
           break;
         case 6:
-          currentNeighbour = currentNeighbour++;
+          currentNeighbour = cellNumber + voidRow - 1;
           break;
         case 7:
-          currentNeighbour = currentNeighbour++;
+          currentNeighbour = cellNumber + voidRow;
+          break;
+        case 8:
+          currentNeighbour = cellNumber + voidRow + 1;
           break;
       }
+
+      aliveNeighbours += populationWithVoids[currentNeighbour] ? 1 : 0;
 
       // if more than 3 neighbours are alive, the cell dies
       if (aliveNeighbours > 3) {
         newPopulation[cellNumber] = 0;
-        break;
+        return;
       }
-
-      // case of nono-real neighbour
-      if (0 > currentNeighbour || currentNeighbour > grid) {
-        currentNeighbour++;
-        continue;
-      }
-
-      aliveNeighbours += population[currentNeighbour] ? 1 : 0;
-      currentNeighbour++;
     }
 
     if (aliveNeighbours < 2) {
@@ -109,7 +108,17 @@ function ComputeNextGeneration(population: BolleanInt[]): BolleanInt[] {
     }
   });
 
-  return newPopulation;
+  //extract the population from the void
+  const extractedPopulation: BolleanInt[] = [];
+  newPopulation.forEach((_, i) => {
+    if (voidCells.includes(i)) {
+      return;
+    } else {
+      extractedPopulation.push(newPopulation[i]);
+    }
+  });
+
+  return extractedPopulation;
 }
 
 export { ComputeNextGeneration };
