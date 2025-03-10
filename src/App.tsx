@@ -11,7 +11,7 @@ export type BolleanInt = 0 | 1;
 function App() {
   const populationInitState: BolleanInt[] = Array.from(
     { length: gridRow * gridRow },
-    () => 0
+    () => Math.floor(Math.random() * 2) as BolleanInt
   );
   const [isOnDrawing, setIsOnDrawing] = useState<boolean>(true);
   const [isMouseDown, setIsMouseDown] = useState<boolean>(false);
@@ -37,7 +37,10 @@ function App() {
   const reset = (): void => {
     setIsOnDrawing(true);
     setGeneration(0);
-    setPopulation(populationInitState);
+    setPopulation(Array.from(
+      { length: gridRow * gridRow },
+      () => 0
+    ));
   };
 
   const handleMainButtonClick = () => {
@@ -153,27 +156,18 @@ function Cell({
     }
   };
 
-  const aliveDeadRatio: number = 7 / 12;
-
   const cubeSizeInPx: number = 15;
-  const aliveCellSizeInPx: number = cubeSizeInPx * aliveDeadRatio;
 
   return (
     <div
       onMouseEnter={handleDrawing}
-      className="bg-black flex items-center justify-center"
+      className={`${
+        population[cellNumber] ? "bg-white" : "bg-black"
+      } flex items-center justify-center`}
       style={{
         width: cubeSizeInPx,
         height: cubeSizeInPx,
       }}
-    >
-      {/* return null if isAlive is false to avoid reacts render the value 0*/}
-      {population[cellNumber] ? (
-        <div
-          className="[${aliveCellSize}] bg-white rounded-4xl"
-          style={{ height: aliveCellSizeInPx, width: aliveCellSizeInPx }}
-        ></div>
-      ) : null}
-    </div>
+    ></div>
   );
 }
